@@ -1,3 +1,4 @@
 group is
   $/basis.cm
+  card.sml
   vm.sml

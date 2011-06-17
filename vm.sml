@@ -87,9 +87,18 @@ struct
   (* slots *)
 
   fun field (vitality, field) = field
+  fun vitality (vitality, field) = vitality
 
-  fun get  slot = field (Array.sub (proponent, slot))
-  fun copy slot = field (Array.sub (opponent,  slot))
+  fun our   slot = Array.sub (proponent, slot)
+  fun their slot = Array.sub (opponent,  slot)
+
+  infix 1 <-: :->
+
+  fun slot <-: v = Array.update (proponent, slot, (v, field (our   slot)))
+  fun v :-> slot = Array.update (opponent,  slot, (v, field (their slot)))
+
+  fun get  slot = field (our   slot)
+  fun copy slot = field (their slot)
   val get  = F (fn v => asFun (B.int --> a) get v)
   val copy = F (fn v => asFun (B.int --> a) copy v)
 
@@ -97,10 +106,10 @@ struct
   fun undefined x = undefined x
 
   fun inc slot =
-    let val (v, f) = Array.sub (proponent, slot)
+    let val v = vitality (our slot)
         val _ =
             if v > 0 andalso v < 65535 then
-                Array.update (proponent, slot, (v + 1, f))
+                slot <-: v + 1
             else
                 ()
     in  I
@@ -108,15 +117,14 @@ struct
 
   fun dec slot' =
     let val slot = 255 - slot'
-        val (v, f) = Array.sub (opponent, slot)
+        val v = vitality (their slot)
         val _ =
             if v > 0 then
-                Array.update (opponent, slot, (v - 1, f))
+                v - 1 :-> slot
             else
                 ()
     in  I
     end
-
 
   val inc = F (fn v => cast (inc (toInt (cast v))))
   val dec = F (fn v => cast (dec (toInt (cast v))))
