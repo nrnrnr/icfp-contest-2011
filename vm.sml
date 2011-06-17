@@ -131,8 +131,32 @@ functor Run(structure Value : VALUE
   (* vitality *)
   fun undefined x = undefined x
 
-  val inc = F undefined
-  val dec = F undefined
+  fun inc slot =
+    let val (v, f) = Array.sub (proponent, slot)
+        val _ =
+            if v > 0 andalso v < 65535 then
+                Array.update (proponent, slot, (v + 1, f))
+            else
+                ()
+    in  I
+    end
+
+  fun dec slot' =
+    let val slot = 255 - slot'
+        val (v, f) = Array.sub (opponent, slot)
+        val _ =
+            if v > 0 then
+                Array.update (opponent, slot, (v - 1, f))
+            else
+                ()
+    in  I
+    end
+
+
+  val inc = F (fn v => cast (inc (toInt (cast v))))
+  val dec = F (fn v => cast (dec (toInt (cast v))))
+
+
   val attack = F undefined
   val help   = F undefined
   val revive = F undefined
