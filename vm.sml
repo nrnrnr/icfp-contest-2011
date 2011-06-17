@@ -1,37 +1,3 @@
-signature VM = sig
-  type slot  = int  (* reference to slot i *)
-  type slot' = int  (* reference to slot 255-i *)
-  type 'a v   (* a value or function *)
-
-  val @@ : ('a -> 'b) v * 'a v -> 'b v   (* apply *)
-
-  (* combinators *)
-
-  val I    : ('a -> 'a) v
-  val S    : (('a -> 'b -> 'c) -> ('a -> 'b) -> ('a -> 'c)) v
-  val K    : ('a -> 'b -> 'a) v
-  val put  : ('a -> 'b -> 'b) v
-
-  (* numbers *)
-
-  val zero : int v
-  val succ : (int -> int) v
-  val dbl  : (int -> int) v
-
-  (* slots *)
-
-  val get  : (slot -> 'a) v  (* load from slot or fail *)
-  val copy : (slot -> 'a) v  (* load from *opponent's* slot or fail *)
-
-  (* vitality *)
-  val inc : (slot  -> ('a -> 'a)) v   (* increment our vitality *)
-  val dec : (slot' -> ('a -> 'a)) v   (* decrement their vitality *)
-  val attack : (slot -> slot' -> int -> ('a -> 'a)) v (* decrease everyone's vitality *)
-  val help   : (slot -> slot  -> int -> ('a -> 'a)) v (* transfer vitality internally *)
-  val revive : (slot -> ('a -> 'a)) v (* force vitality to 1 *)
-  val zombie : (slot' -> 'a -> ('b -> 'b)) v (* create zombie in opponent *)
-end
-
 signature VALUE = sig
   exception Error of string
   datatype 'a v = N of int
@@ -61,15 +27,14 @@ structure Value :> VALUE = struct
 end
 
 
-    
 functor Run(structure Value : VALUE
             type vitality = int
             val proponent : (vitality * 'a Value.v) array
             val opponent  : (vitality * 'a Value.v) array
-            ) : VM where type 'a v = 'a Value.v = struct
+            ) : CARD where type 'a card = 'a Value.v = 
+struct
+  type 'a card = 'a Value.v
   open Value
-  val @@ = apply
-  infix 3 @@
 
   type 'a pair = { embed : 'a -> 'a v, project : 'a v -> 'a }
   structure B = struct (* bijection *)
