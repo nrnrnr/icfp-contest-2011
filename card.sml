@@ -32,7 +32,7 @@ end
 
 signature COMBINATORS = sig
   include CARD
-  val @@ : ('a -> 'b) card -> 'a card -> 'b card
+  val @@ : ('a -> 'b) card * 'a card -> 'b card
 end
 
 (* we'll need several representations *)
