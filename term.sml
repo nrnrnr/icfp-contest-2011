@@ -88,40 +88,6 @@ struct
   fun show t = show' nobracket t
 end
 
-functor Embedding (val error : string -> 'a) = struct
-  structure T = Term
-  val show = ShowTerm.show
-  fun err ss = error (String.concat ss)
-  fun toInt (T.N n) = n
-    | toInt t = err ["tried to project ", show t, " as integer"]
-
-  type 'a pair = { embed : 'a -> 'a Term.t, project : 'a Term.t -> 'a }
-
-  val castpair : 'a pair -> { embed : 'a -> 'b Term.t, project : 'b Term.t -> 'a }
-    = fn {embed = e, project = p} => { embed   = fn a => T.castTerm (e a)
-                                     , project = fn t => p (T.castTerm t)
-                                     } 
-
-  val int : int pair = { embed = T.N, project = toInt }
-(*
-    fun --> apply (arg : 'a pair, res : 'b pair) : ('a -> 'b) pair = 
-      { embed = (fn f => #embed res o f o #project arg)
-                                   : ('a -> 'b) -> ('a -> 'b) Term.t
-      , project = (fn v => #project res o apply v o #embed arg) :
-              ('a -> 'b) Term.t -> 'a -> 'b
-       }
-*)
-(*
-  val a : 'a v pre_pair = { embed = cast, project = cast }
-    val id : unit pair = fn clock =>
-        { embed   = fn () => F (Clock.tick clock (fn x => x))
-        , project = fn _ => ()
-        }
-*)
-end
-
-
-
 functor TermCombinatorsFn (val clock : Clock.t
                            structure VM : CARD where type 'a card = 'a
                                                  and type slot = int
@@ -131,26 +97,28 @@ functor TermCombinatorsFn (val clock : Clock.t
   structure Card = TermCard
   open Term
 
-  infix 3 @@
+  infix 3 @@ @-@
   infix 4 :@:
   exception Error of string
   val show = ShowTerm.show
 
-  structure E = Embedding (fun error s = raise Error s)
+  fun err ss = raise Error (String.concat ss)
 
+  (**** embedding and projection ****)
   fun embed {embed, project} = embed
   fun project {embed, project} = project
 
-  val int = { embed   = fn x => #embed (E.castpair E.int) x
-            , project = fn x => #project (E.castpair E.int) x
+  val int = { embed   = N
+            , project = fn (N n) => n | t => err ["projected ", show t, " to integer"]
             }
   fun --> (arg, res) = { embed = fn f => embed res o f o project arg
                        , project = fn v => raise Error "higher-order function"
                        }
+  infixr 2 -->
   val a = { embed = castTerm, project = fn x => x }
   val u = { embed = fn () => C I, project = fn _ => raise Error "unit argument" }
+  (************************************)
 
-  infixr 2 -->
   infixr 0 $
   fun f $ x = f x
 
@@ -163,7 +131,7 @@ functor TermCombinatorsFn (val clock : Clock.t
     (* invariant: results are always in normal form *)
   fun (C I : 'a t) @@ (x : 'a t) : 'a t = x
     | (C K :@: x) @@ y       = cast x
-    | (C S :@: f :@: g) @@ x = f @@ x @@ (g @@ x)
+    | (C S :@: f :@: g) @@ x = f @-@ x @-@ (g @-@ x)
     | (C put)  @@ _          = cast (C I)
     | (C succ) @@ n          = cast $ e (int --> int)  VM.succ n
     | (C dbl)  @@ n          = cast $ e (int --> int)  VM.dbl  n
@@ -179,8 +147,8 @@ functor TermCombinatorsFn (val clock : Clock.t
     | (C zombie :@: i) @@ x  = cast $ e (int --> a --> u) VM.zombie i x
     | (C zero) @@ _          = raise Error "applied zero"
     | f @@ x                 = f :@: x
+  and f @-@ x = Clock.tick clock op @@ (f, x)
 
-
-  val op @@ = fn (f, x) => castTerm (Clock.tick clock op @@ (castTerm f, x))
+  fun f @@ x = castTerm (f @-@ castTerm x)
   
 end
