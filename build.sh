@@ -1,0 +1,1 @@
+echo 'CM.make "ltg.cm";' | /usr/local/smlnj-110.73/bin/sml -Ccontrol.poly-eq-warn=false

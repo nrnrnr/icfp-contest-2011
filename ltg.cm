@@ -4,3 +4,4 @@ group is
   vm.sml
   combo.sml
   term.sml
+  stringcard.sml
