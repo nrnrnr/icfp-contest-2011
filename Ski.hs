@@ -3,7 +3,7 @@ import Test.QuickCheck
 import Prelude hiding (abs)
 
 data C = S | K | I | C :@: C | CVar String
-  deriving (Show)
+  deriving (Show, Eq)
 
 cnormal :: C -> C
 cnormal (t :@: t') =
@@ -14,10 +14,13 @@ cnormal (t :@: t') =
     (f, a) -> f :@: a
 cnormal base = base
 
+-- note that for any x, S (KK) I x == K x
+
 
 data Lam = Lam String Lam
          | App Lam Lam
          | Var String
+  deriving (Show)
            
 trans :: Lam -> C
 abs   :: String -> C -> C
@@ -61,4 +64,12 @@ freeIn x (Var y) = x == y
 freeIn x (App f a) = x `freeIn` f || x `freeIn` a
 freeIn x (Lam y b) = x /= y && x `freeIn` b
 
-                    
+
+normal_forms_preserved e = cnormal (trans e) == cnormal (trans (lnormal e))
+
+x, y, z :: Lam
+x = Var "x"
+y = Var "y"
+z = Var "z"
+
+nfp = normal_forms_preserved
