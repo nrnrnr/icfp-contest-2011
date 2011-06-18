@@ -30,6 +30,11 @@ signature CARD = sig
   val zombie : (slot' -> 'a -> ('b -> 'b)) card (* create zombie in opponent *)
 end
 
+signature COMBINATORS = sig
+  include CARD
+  val @@ : ('a -> 'b) card -> 'a card -> 'b card
+end
+
 (* we'll need several representations *)
 signature CARD_TRANSLATE = sig
   structure C1 : CARD
