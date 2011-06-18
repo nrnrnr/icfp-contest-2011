@@ -118,7 +118,7 @@ functor TermCombinatorsFn (val clock : Clock.t
                        , project = fn v => raise Error "higher-order function"
                        }
   infixr 2 -->
-  val a = { embed = castTerm, project = fn x => x }
+  val f = { embed = castTerm, project = castTerm }  (* a field *)
   val u = { embed = fn () => C I, project = fn _ => raise Error "unit argument" }
   (************************************)
 
@@ -138,18 +138,27 @@ functor TermCombinatorsFn (val clock : Clock.t
     | (C put)  @@ _          = cast (C I)
     | (C succ) @@ n          = cast $ e (int --> int)  VM.succ n
     | (C dbl)  @@ n          = cast $ e (int --> int)  VM.dbl  n
-    | (C get)  @@ i          = cast $ e (int --> a)    VM.get  i
+    | (C get)  @@ i          = cast $ e (int --> f)    VM.get  i
+    | (C copy) @@ i          = cast $ e (int --> f)    VM.copy i
     | (C inc)  @@ i          = cast $ e (int --> u)    VM.inc  i
     | (C dec)  @@ i          = cast $ e (int --> u)    VM.dec  i
     | (C attack :@: i :@: j) 
                         @@ n = cast $ e (int --> int --> int --> u) VM.attack i j n
     | (C help   :@: i :@: j) 
                         @@ n = cast $ e (int --> int --> int --> u) VM.help   i j n
-    | (C copy) @@ i          = cast $ e (int --> u)       VM.copy i
     | (C revive) @@ i        = cast $ e (int --> u)       VM.revive i
-    | (C zombie :@: i) @@ x  = cast $ e (int --> a --> u) VM.zombie i x
+    | (C zombie :@: i) @@ x  = cast $ e (int --> f --> u) VM.zombie i x
     | (C zero) @@ _          = raise Error "applied zero"
-    | f @@ x                 = f :@: x
+    | (f as C K) @@ x        = f :@: x
+    | (f as C S) @@ x        = f :@: x
+    | (f as (C S :@: _)) @@ x      = f :@: x
+    | (f as C attack) @@ x         = f :@: x
+    | (f as (C attack :@: _)) @@ x = f :@: x
+    | (f as C help) @@ x           = f :@: x
+    | (f as (C help :@: _)) @@ x   = f :@: x
+    | (f as C zombie) @@ x         = f :@: x
+    | (f as _ :@: _) @@ x          = f :@: x
+    | (N n) @@ t = err ["applied integer ", Int.toString n, " to " , show t]
   and f @-@ x = Clock.tick clock op @@ (f, x)
 
   fun f @@ x = castTerm (f @-@ castTerm x)
