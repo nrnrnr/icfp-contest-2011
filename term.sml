@@ -13,9 +13,8 @@ structure Term = struct
 
   datatype 'a t
     = C  of 'a card
-    | P1 of 'a partial1  (* partial applications of a term *)
-    | P2 of 'a partial2
     | N  of int
+    | :@: of 'a t * 'a t  (* general application *)
   withtype 'a partial1 = 'a card * 'a t
       and  'a partial2 = 'a partial1 * 'a t
 
@@ -31,10 +30,7 @@ structure Term = struct
     case t
       of C c => C (cast c)
        | N n => N n
-       | P1 p => P1 (cast1 p)
-       | P2 p => P2 (cast2 p)
-  and cast1 (c, t) = (cast c, castTerm t)
-  and cast2 (p, t) = (cast1 p, castTerm t)
+       | :@: (t1, t2) => :@: (castTerm t1, castTerm t2)
 
 end
 
@@ -42,6 +38,7 @@ structure TermCard : CARD = struct
   type slot = int
   type slot' = int
   type 'a card = 'a Term.t
+  type u = unit
   datatype unitype = U of unitype
   val untyped = Term.cast
   
@@ -86,10 +83,104 @@ struct
     case t
       of T.C c => showCard c
        | T.N n => Int.toString n
-       | Term.P1 (c, arg) => br (showCard c ^ " " ^ show' bracket arg)
-       | Term.P2 (t, arg) => br (show' nobracket (Term.P1 t) ^ " " ^ show' bracket arg)
+       | Term.:@: (t1, t2) => br (show' nobracket t1 ^ " " ^ show' bracket t2)
 
   fun show t = show' nobracket t
 end
 
+functor Embedding (val error : string -> 'a) = struct
+  structure T = Term
+  val show = ShowTerm.show
+  fun err ss = error (String.concat ss)
+  fun toInt (T.N n) = n
+    | toInt t = err ["tried to project ", show t, " as integer"]
 
+  type 'a pair = { embed : 'a -> 'a Term.t, project : 'a Term.t -> 'a }
+
+  val castpair : 'a pair -> { embed : 'a -> 'b Term.t, project : 'b Term.t -> 'a }
+    = fn {embed = e, project = p} => { embed   = fn a => T.castTerm (e a)
+                                     , project = fn t => p (T.castTerm t)
+                                     } 
+
+  val int : int pair = { embed = T.N, project = toInt }
+(*
+    fun --> apply (arg : 'a pair, res : 'b pair) : ('a -> 'b) pair = 
+      { embed = (fn f => #embed res o f o #project arg)
+                                   : ('a -> 'b) -> ('a -> 'b) Term.t
+      , project = (fn v => #project res o apply v o #embed arg) :
+              ('a -> 'b) Term.t -> 'a -> 'b
+       }
+*)
+(*
+  val a : 'a v pre_pair = { embed = cast, project = cast }
+    val id : unit pair = fn clock =>
+        { embed   = fn () => F (Clock.tick clock (fn x => x))
+        , project = fn _ => ()
+        }
+*)
+end
+
+
+
+functor TermCombinatorsFn (val clock : Clock.t
+                           structure VM : CARD where type 'a card = 'a
+                                                 and type slot = int
+                                                 and type slot' = int
+                                                 and type u = unit
+                          ) : COMBINATORS = struct
+  structure Card = TermCard
+  open Term
+
+  infix 3 @@
+  infix 4 :@:
+  exception Error of string
+  val show = ShowTerm.show
+
+  structure E = Embedding (fun error s = raise Error s)
+
+  fun embed {embed, project} = embed
+  fun project {embed, project} = project
+
+  val int = { embed   = fn x => #embed (E.castpair E.int) x
+            , project = fn x => #project (E.castpair E.int) x
+            }
+  fun --> (arg, res) = { embed = fn f => embed res o f o project arg
+                       , project = fn v => raise Error "higher-order function"
+                       }
+  val a = { embed = castTerm, project = fn x => x }
+  val u = { embed = fn () => C I, project = fn _ => raise Error "unit argument" }
+
+  infixr 2 -->
+  infixr 0 $
+  fun f $ x = f x
+
+  val cast = castTerm
+  fun card zero = N 0
+    | card c = C c
+
+  val e = embed
+
+    (* invariant: results are always in normal form *)
+  fun (C I : 'a t) @@ (x : 'a t) : 'a t = x
+    | (C K :@: x) @@ y       = cast x
+    | (C S :@: f :@: g) @@ x = f @@ x @@ (g @@ x)
+    | (C put)  @@ _          = cast (C I)
+    | (C succ) @@ n          = cast $ e (int --> int)  VM.succ n
+    | (C dbl)  @@ n          = cast $ e (int --> int)  VM.dbl  n
+    | (C get)  @@ i          = cast $ e (int --> a)    VM.get  i
+    | (C inc)  @@ i          = cast $ e (int --> u)    VM.inc  i
+    | (C dec)  @@ i          = cast $ e (int --> u)    VM.dec  i
+    | (C attack :@: i :@: j) 
+                        @@ n = cast $ e (int --> int --> int --> u) VM.attack i j n
+    | (C help   :@: i :@: j) 
+                        @@ n = cast $ e (int --> int --> int --> u) VM.help   i j n
+    | (C copy) @@ i          = cast $ e (int --> u)       VM.copy i
+    | (C revive) @@ i        = cast $ e (int --> u)       VM.revive i
+    | (C zombie :@: i) @@ x  = cast $ e (int --> a --> u) VM.zombie i x
+    | (C zero) @@ _          = raise Error "applied zero"
+    | f @@ x                 = f :@: x
+
+
+  val op @@ = fn (f, x) => castTerm (Clock.tick clock op @@ (castTerm f, x))
+  
+end
