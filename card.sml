@@ -3,6 +3,9 @@ signature CARD = sig
   type slot'
   type 'a card
 
+  type unitype
+  val untyped : 'a card -> unitype card
+
   (* combinators *)
 
   val I    : ('a -> 'a) card
