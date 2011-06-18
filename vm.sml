@@ -27,12 +27,19 @@ structure Value :> VALUE = struct
 end
 
 
+
+
 functor Run(structure Value : VALUE
             type vitality = int
             val automatic : bool ref (* are we in the auto phase? *)
             val proponent : (vitality * 'a Value.v) array
             val opponent  : (vitality * 'a Value.v) array
-            ) : CARD where type 'a card = 'a Value.v = 
+            ) : sig
+                  include CARD where type 'a card = 'a Value.v
+                  val cardToSlot : ('a -> 'b) card -> int -> unit
+                  val slotToCard : int -> ('a -> 'b) card -> unit
+                end
+=
 struct
   type 'a card = 'a Value.v
   open Value
@@ -99,10 +106,12 @@ struct
   fun their slot = Array.sub (opponent,  slot)
   fun their' slot' = their (255 - slot')
 
-  infix 1 <-: :->
+  infix 1 <-: :-> <=: :=>
 
   fun slot <-: v = Array.update (proponent, slot, (v, field (our   slot)))
   fun v :-> slot = Array.update (opponent,  slot, (v, field (their slot)))
+
+  fun slot <=: x = Array.update (proponent, slot, (vitality (our   slot), x))
 
   fun get  slot = field (our   slot)
   fun copy slot = field (their slot)
@@ -172,5 +181,13 @@ struct
   val zombie = F (fn v => asFun (B.int --> B.a --> B.id) zombie v)
 
 
+  fun toFun' f = cast o toFun f o cast
 
+  fun liveField x = if vitality x > 0 then field x
+                    else raise Error "pulled a field from a dead slot"
+
+  fun cardToSlot card slot =
+        slot <=: toFun' card (liveField (our slot)) handle _ => slot <=: I
+  fun slotToCard slot card =
+        slot <=: toFun' (liveField (our slot)) card handle _ => slot <=: I
 end
