@@ -3,6 +3,7 @@ structure StringCard : CARD = struct
   type slot = int
   type slot' = int
   type unitype = unit
+  type field = unit
 
   fun untyped c = c
   fun cast c = c

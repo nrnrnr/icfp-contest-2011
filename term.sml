@@ -40,6 +40,7 @@ structure TermCard : CARD = struct
   type 'a card = 'a Term.t
   type u = unit
   datatype unitype = U of unitype
+  type field = unitype Term.t
   val untyped = Term.cast
   
   open Term
@@ -94,6 +95,7 @@ functor TermCombinatorsFn (val clock : Clock.t
                                                  and type slot = int
                                                  and type slot' = int
                                                  and type u = unit
+                                                 and type field = TermCard.unitype Term.t
                           ) : COMBINATORS = struct
   structure Card = TermCard
   open Term
