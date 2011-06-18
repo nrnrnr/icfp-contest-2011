@@ -42,5 +42,5 @@ end
 signature CARD_TRANSLATE = sig
   structure C1 : CARD
   structure C2 : CARD
-  val translate : 'a C1.card -> 'a C1.card
+  val translate : 'a C1.card -> 'a C2.card
 end
