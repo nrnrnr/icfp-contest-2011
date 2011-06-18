@@ -5,6 +5,7 @@ structure StringCard : CARD = struct
   type unitype = unit
 
   fun untyped c = c
+  fun cast c = c
 
   (* combinators *)
 

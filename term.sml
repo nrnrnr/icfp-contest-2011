@@ -48,7 +48,7 @@ structure TermCard : CARD = struct
   open Term
 end
 
-functor TranslateTerm(Card2 : CARD) : CARD_TRANSLATE = struct
+functor TranslateTermFn(Card2 : CARD) : CARD_TRANSLATE = struct
   structure C1 = TermCard
   structure C2 = Card2
   fun translate t =
@@ -71,7 +71,13 @@ functor TranslateTerm(Card2 : CARD) : CARD_TRANSLATE = struct
 end
 
 
-functor ShowTerm(val showCard : 'a Term.card -> string) = struct
+structure ShowTerm : sig
+    val show : 'a Term.t -> string
+ end
+=
+struct
+  structure Tx = TranslateTermFn(StringCard)
+  val showCard : 'a Term.card -> string = Tx.translate
   structure T = Term
   fun bracket s = "(" ^ s ^ ")"
   fun nobracket s = s
