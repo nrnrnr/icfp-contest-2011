@@ -27,6 +27,9 @@ cnormal (t :@: t') =
     (f, a) -> f :@: a
 cnormal base = base
 
+-- N.B. it would be good to automate normalization and with 
+-- extensional equality
+
 -- note that for any x, S (KK) I x == K x
 
 
@@ -38,7 +41,9 @@ data Lam = Lam String Lam
 trans :: Lam -> C
 abs   :: String -> C -> C
 
-trans (Lam x e) = abs x (trans e)
+trans (Lam x e)
+  | App f (Var y) <- e, y == x, not (x `freeIn` f) = trans f
+  | otherwise = abs x (trans e)
 trans (App f a) = trans f :@: trans a
 trans (Var x)   = CVar x
 
@@ -47,6 +52,20 @@ abs x (CVar y)
   | x /= y = K :@: CVar y
 abs x (t :@: t') = (S :@: abs x t) :@: abs x t'
 abs x c = K :@: c
+
+
+{-
+-- next is from wikipedia on combinatory logic
+ctrans (Var x) = CVar x
+ctrans (App e1 e2) = ctrans e1 :@: ctrans e2
+ctrans (Lam x e)
+  | App f (Var y) <- e, y == x, not (x `freeIn` f) = ctrans f
+  | not (x `freeIn` e) = K :@: ctrans e
+  | Var y <- e, y == x = I
+  | Lam y e' <- e = twolambda (ctrans e)
+  | App e1 e2 <- e = S :@: ctrans (Lam x e1) :@: ctrans (Lam x e2)
+ where twolambda y (c1 :@: c2) = S :@:
+-}
 
 
 
