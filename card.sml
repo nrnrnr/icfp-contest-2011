@@ -5,6 +5,7 @@ signature CARD = sig
 
   type unitype
   val untyped : 'a card -> unitype card
+  val cast : 'a card -> 'b card (* can't be helped *)
 
   (* combinators *)
 
