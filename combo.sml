@@ -1,8 +1,9 @@
-functor Combo (Card : COMBINATORS where type 'a card = 'a Value.v) : sig
+functor ComboFn (Combo : COMBINATORS where type 'a t = 'a Value.v) : sig
 end =
 struct
-  structure C = Card
-  val @@ = C.@@
+  structure C = Combo.Card
+  val @@ = Combo.@@
+  val card = Combo.card
   open Value
 
   infix 3 @@
@@ -12,8 +13,8 @@ struct
   datatype a = A of a
   datatype b = B of b
 
-  val fst : ('a -> 'b -> 'a) v = C.K
-  val snd = F (fn v => toFun' (C.K @@ C.I : (a -> b -> b) v) v)
+  val fst = F (fn v => toFun' (card C.K : ('a -> 'b -> 'a) v) v)
+  val snd = F (fn v => toFun' (card C.K @@ card C.I : (a -> b -> b) v) v)
 
   fun self_I f = self_I f
         (* given f, return function g that when applied to I,

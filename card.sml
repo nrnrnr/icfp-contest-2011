@@ -35,8 +35,10 @@ signature CARD = sig
 end
 
 signature COMBINATORS = sig
-  include CARD
-  val @@ : ('a -> 'b) card * 'a card -> 'b card
+  structure Card : CARD
+  type 'a t
+  val card : 'a Card.card -> 'a t
+  val @@ : ('a -> 'b) t * 'a t -> 'b t
 end
 
 (* we'll need several representations *)
