@@ -49,10 +49,19 @@ struct
 
   fun compose f g = (S :@: (K :@: f)) :@: ((S :@: (K :@: g)) :@: I)
 
+  fun self f      = S :@: (K :@: (K :@: f)) :@: (S :@: (K :@: f) :@: I)
 
-(*
-  fun stm (Seq (s1, s2)) =
-*)      
+  fun self' f = (fn x => f) o f
+
+  structure Test = struct
+    fun self_compose_law f = self f = compose (K :@: f) f
+    fun assert p = if p then () else let exception Assert in raise Assert end
+    val _ = assert (self_compose_law (Exp 1))
+  end
+
+  fun stm (IR.Seq (s1, s2)) = compose (stm s2) (stm s1)
+    | stm s = stm s
+
 
 
 end
