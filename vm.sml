@@ -49,6 +49,7 @@ struct
   open Value
   datatype unitype = U of unitype
   val untyped = cast
+  type u = unit
 
   type 'a pre_pair = { embed : 'a -> 'a v, project : 'a v -> 'a }
   type 'a pair = Clock.t -> 'a pre_pair

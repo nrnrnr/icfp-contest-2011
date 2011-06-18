@@ -27,6 +27,8 @@ structure StringCard : CARD = struct
 
   (* vitality *)
 
+  type u = unit
+
   val inc    = "inc"
   val dec    = "dec"
   val attack = "attack"

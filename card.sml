@@ -26,12 +26,15 @@ signature CARD = sig
   val copy : (slot -> 'a) card  (* load from *opponent's* slot or fail *)
 
   (* vitality *)
-  val inc : (slot  -> ('a -> 'a)) card   (* increment our vitality *)
-  val dec : (slot' -> ('a -> 'a)) card   (* decrement their vitality *)
-  val attack : (slot -> slot' -> int -> ('a -> 'a)) card (* decrease everyone's vitality *)
-  val help   : (slot -> slot  -> int -> ('a -> 'a)) card (* transfer vitality internally *)
-  val revive : (slot -> ('a -> 'a)) card (* force vitality to 1 *)
-  val zombie : (slot' -> 'a -> ('b -> 'b)) card (* create zombie in opponent *)
+
+  type u (* unit type, for things that return the identity function *)
+
+  val inc : (slot  -> u) card   (* increment our vitality *)
+  val dec : (slot' -> u) card   (* decrement their vitality *)
+  val attack : (slot -> slot' -> int -> u) card (* decrease everyone's vitality *)
+  val help   : (slot -> slot  -> int -> u) card (* transfer vitality internally *)
+  val revive : (slot -> u) card (* force vitality to 1 *)
+  val zombie : (slot' -> 'a -> u) card (* create zombie in opponent *)
 end
 
 signature COMBINATORS = sig
