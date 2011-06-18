@@ -80,9 +80,16 @@ freeIn x (Lam y b) = x /= y && x `freeIn` b
 
 normal_forms_preserved e = cnormal (trans e) == cnormal (trans (lnormal e))
 
-x, y, z :: Lam
+x, y, z, f, g :: Lam
 x = Var "x"
 y = Var "y"
 z = Var "z"
+f = Var "f"
+g = Var "g"
 
 nfp = normal_forms_preserved
+
+
+compose = Lam "f" $ Lam "g" $ Lam "x" $ App f (App g x)
+
+self = Lam "f" $ compose `App` (Lam "_" f) `App` f
