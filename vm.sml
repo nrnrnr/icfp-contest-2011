@@ -1,16 +1,35 @@
 signature VALUE = sig
+  type clock  (* mutable clock *)
+  val clock : unit -> clock  (* fresh clock *)
+  val reset_clock : clock -> unit (* make clock fresh *)
   exception Error of string
   datatype 'a v = N of int
-                | F of unit v -> unit v
+                | F of unit v -> unit v  (* invariant: arrow includes clock tick *)
   val cast  : 'a v -> 'b v  (* change phantom type *)
   val apply : ('a -> 'b) v * 'a v -> 'b v
+    (* apply (f, a) decrements internal clock *)
 
   val toInt : int v -> int
-  val toFun : ('a -> 'b) v -> 'a v -> 'b v
+  val toFun : ('a -> 'b) v -> ('a v -> 'b v)
+        (* function returned ticks internal clock every time it is applied *)
+    
+  val with_clock : clock -> ('a -> 'b) -> ('a -> 'b)
+    (* makes function application tick *)
 end
 
 structure Value :> VALUE = struct
   exception Error of string
+  type clock = { apps_left : int ref } (* number of applications remaining *)
+  val stdClock = 1000  (* number of ticks on a standard clock *)
+  fun clock () = { apps_left = ref stdClock }
+  fun reset_clock { apps_left } = apps_left := stdClock
+
+  fun with_clock { apps_left } f a =
+    if !apps_left > 0 then
+      f a before apps_left := !apps_left - 1
+    else
+      raise Error "hit the application limit"
+
   datatype 'a v = N of int
                 | F of unit v -> unit v
   fun cast (N n) = N n
@@ -29,11 +48,12 @@ end
 
 
 
-functor Run(structure Value : VALUE
+functor RunFn(structure Value : VALUE
             type vitality = int
+            val this_clock : Value.clock
             val automatic : bool ref (* are we in the auto phase? *)
-            val proponent : (vitality * 'a Value.v) array
-            val opponent  : (vitality * 'a Value.v) array
+            val proponent : (vitality * unit Value.v) array
+            val opponent  : (vitality * unit Value.v) array
             ) : sig
                   include CARD where type 'a card = 'a Value.v
                   val cardToSlot : ('a -> 'b) card -> int -> unit
@@ -43,26 +63,34 @@ functor Run(structure Value : VALUE
 struct
   type 'a card = 'a Value.v
   open Value
+  datatype unitype = U of unitype
+  val untyped = cast
 
-  type 'a pair = { embed : 'a -> 'a v, project : 'a v -> 'a }
+  type 'a pre_pair = { embed : 'a -> 'a v, project : 'a v -> 'a }
+  type 'a pair = clock -> 'a pre_pair
   structure B = struct (* bijection *)
-    val int : int pair = { embed = N, project = toInt }
-    fun --> (arg : 'a pair, res : 'b pair) : ('a -> 'b) pair =
-        { embed   =
-           (fn f => cast (F (fn v => cast (#embed res (f (#project arg (cast v)))))))
+    val int : int pair = fn _ => { embed = N, project = toInt }
+    fun --> (arg : 'a pair, res : 'b pair) : ('a -> 'b) pair = fn clock => 
+      let val (arg, res) = (arg clock, res clock)
+          val c = with_clock clock
+      in  { embed   =
+             (fn f => cast (F (cast o #embed res o c f o #project arg o cast)))
                       : ('a -> 'b) -> ('a -> 'b) v
-        , project = (fn v => fn a => #project res (toFun v (cast (#embed arg a)))) :
+          , project = (fn v => #project res o toFun v o cast o #embed arg) :
               ('a -> 'b) v -> 'a -> 'b
+          }
+      end
+    val a : 'a v pre_pair = { embed = cast, project = cast }
+    val id : unit pair = fn clock =>
+        { embed   = fn () => F (with_clock clock (fn x => x))
+        , project = fn _ => ()
         }
-    val a : 'a v pair = { embed = cast, project = cast }
-    val id : unit pair = { embed   = fn () => F (fn x => x)
-                         , project = fn _ => ()
-                         }
   end
-  val --> = B.-->
+  fun --> (arg, res) = B.--> (fn _ => arg, fn _ => res) this_clock
   infixr 2 -->                          
   val (a, b, c) = (B.a, B.a, B.a)
-
+  val Bid = B.id this_clock
+  val Bint = B.int this_clock
 
 
   type slot  = int  (* reference to slot i *)
@@ -92,14 +120,14 @@ struct
   fun pinlo n = if n < 0 then 0 else n
   val pin = pinhi o pinlo
 
-  val zero = #embed B.int 0
-  val succ = #embed (B.int --> B.int) (fn n => pin (n + 1))
-  val dbl  = #embed (B.int --> B.int) (fn n => pin (n + n))
+  val zero = #embed Bint 0
+  val succ = #embed (Bint --> Bint) (fn n => pin (n + 1))
+  val dbl  = #embed (Bint --> Bint) (fn n => pin (n + n))
 
 
   (* slots *)
 
-  fun field (vitality, field) = field
+  fun field (vitality, field) = cast field
   fun vitality (vitality, field) = vitality
 
   fun our   slot = Array.sub (proponent, slot)
@@ -111,12 +139,12 @@ struct
   fun slot <-: v = Array.update (proponent, slot, (v, field (our   slot)))
   fun v :-> slot = Array.update (opponent,  slot, (v, field (their slot)))
 
-  fun slot <=: x = Array.update (proponent, slot, (vitality (our   slot), x))
+  fun slot <=: x = Array.update (proponent, slot, (vitality (our   slot), cast x))
 
   fun get  slot = field (our   slot)
   fun copy slot = field (their slot)
-  val get  = F (fn v => asFun (B.int --> a) get v)
-  val copy = F (fn v => asFun (B.int --> a) copy v)
+  val get  = F (fn v => asFun (Bint --> a) get v)
+  val copy = F (fn v => asFun (Bint --> a) copy v)
 
   (* vitality *)
   fun undefined x = undefined x
@@ -138,8 +166,8 @@ struct
     in  if !automatic then increase slot v else decrease slot v
     end
 
-  val inc = F (fn v => asFun (B.int --> B.id) inc v)
-  val dec = F (fn v => asFun (B.int --> B.id) dec v)
+  val inc = F (fn v => asFun (Bint --> Bid) inc v)
+  val dec = F (fn v => asFun (Bint --> Bid) dec v)
 
   fun take_n_from_our n slot = 
     let val v = vitality (our slot)
@@ -175,10 +203,10 @@ struct
           Array.update (opponent, 255-slot', (~1, x))
     end
 
-  val attack = F (fn v => asFun (B.int --> B.int --> B.int --> B.id) attack v)
-  val help   = F (fn v => asFun (B.int --> B.int --> B.int --> B.id) help   v)
-  val revive = F (fn v => asFun (B.int --> B.id) revive v)
-  val zombie = F (fn v => asFun (B.int --> B.a --> B.id) zombie v)
+  val attack = F (fn v => asFun (Bint --> Bint --> Bint --> Bid) attack v)
+  val help   = F (fn v => asFun (Bint --> Bint --> Bint --> Bid) help   v)
+  val revive = F (fn v => asFun (Bint --> Bid) revive v)
+  val zombie = F (fn v => asFun (Bint --> a --> Bid) zombie v)
 
 
   fun toFun' f = cast o toFun f o cast
