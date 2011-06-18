@@ -33,11 +33,13 @@ struct
       | Revive of slot
       | Zombie of slot * unit v
       | Self of stm (* when executed, produces self *)
+      | Store of slot * num
     and num
       = Zero | Succ of num | Dbl of num
       | GetN  of num
       | CopyN of num
       | Combo of num combo
+      | ESeq  of stm * num
     withtype slot = num
     and      slot' = num
   end
@@ -62,6 +64,13 @@ struct
   fun stm (IR.Seq (s1, s2)) = compose (stm s2) (stm s1)
     | stm s = stm s
 
+  fun id x = x
 
+
+  fun literal 0 = IR.Zero
+    | literal n = (if odd n then IR.Succ else id) (double (literal (n div 2)))
+  and double IR.Zero = IR.Zero
+    | double n = IR.Dbl n
+  and odd n = n mod 2 = 1
 
 end
