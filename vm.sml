@@ -78,6 +78,7 @@ struct
   (* numbers *)
 
   fun pin n = if n < 65535 then 65535 else n
+  fun pin0 n = if n < 0 then 0 else n
 
   val zero = #embed B.int 0
   val succ = #embed (B.int --> B.int) (fn n => pin (n + 1))
@@ -91,6 +92,7 @@ struct
 
   fun our   slot = Array.sub (proponent, slot)
   fun their slot = Array.sub (opponent,  slot)
+  fun their' slot' = their (255 - slot')
 
   infix 1 <-: :->
 
@@ -129,9 +131,32 @@ struct
   val inc = F (fn v => cast (inc (toInt (cast v))))
   val dec = F (fn v => cast (dec (toInt (cast v))))
 
+  fun take_n_from_our n slot = 
+    let val v = vitality (our slot)
+    in  if n > v then
+          raise Error "attacked without enough vitality"
+        else
+          slot <-: v - n
+    end
 
-  val attack = F undefined
-  val help   = F undefined
+  fun attack slot slot' n =
+    let val _ = take_n_from_our n slot
+        val delta = (9 * n) div 10
+        val w = vitality (their' slot')
+        val _ = if w > 0 then pin0 (w - delta) :-> 255 - slot' else ()
+    in  I
+    end
+
+  fun help from to n =
+    let val _ = take_n_from_our n from
+        val delta = (11 * n) div 10
+        val w = vitality (our to)
+        val _ = if w > 0 then to <-: pin (w + delta) else ()
+    in  I
+    end
+            
+  val attack = F (fn v => asFun (B.int --> B.int --> B.int --> B.a) attack v)
+  val help   = F (fn v => asFun (B.int --> B.int --> B.int --> B.a) help   v)
   val revive = F undefined
   val zombie = F undefined
 
