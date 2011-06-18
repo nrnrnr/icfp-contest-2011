@@ -5,3 +5,4 @@ group is
   combo.sml
   term.sml
   stringcard.sml
+  clock.sml
