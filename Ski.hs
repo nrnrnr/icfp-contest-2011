@@ -33,3 +33,32 @@ abs x (t :@: t') = (S :@: abs x t) :@: abs x t'
 abs x c = K :@: c
 
 
+
+lnormal :: Lam -> Lam
+lnormal (Lam x e) = Lam x (lnormal e)
+lnormal (App f arg) =
+  case (lnormal f, lnormal arg) of
+    (Lam x body, arg) -> lnormal (subst arg x body)
+    (f, arg) -> App f arg
+lnormal (Var x) = Var x
+
+subst :: Lam -> String -> Lam -> Lam
+subst arg x = theta
+  where theta (Var y)
+          | y == x = arg
+          | otherwise = Var y
+        theta (App f a) = App (theta f) (theta a)
+        theta (Lam y body)
+          | not (y `freeIn` arg) || not (x `freeIn` body) = Lam y (theta body)
+          | otherwise = theta (Lam w (subst (Var w) y body))
+              where w = fresh y (App arg body)
+                    
+fresh y term = if y `freeIn` term then fresh (y++"'") term
+               else y
+                    
+freeIn :: String -> Lam -> Bool
+freeIn x (Var y) = x == y
+freeIn x (App f a) = x `freeIn` f || x `freeIn` a
+freeIn x (Lam y b) = x /= y && x `freeIn` b
+
+                    
