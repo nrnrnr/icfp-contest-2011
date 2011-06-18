@@ -48,5 +48,7 @@ end
 signature CARD_TRANSLATE = sig
   structure C1 : CARD
   structure C2 : CARD
+  exception Failed of string
   val translate : 'a C1.card -> 'a C2.card
+  (* Could raise Failed *)
 end

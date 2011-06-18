@@ -48,6 +48,7 @@ end
 functor TranslateTermFn(Card2 : CARD) : CARD_TRANSLATE = struct
   structure C1 = TermCard
   structure C2 = Card2
+  exception Failed of string
   fun translate t =
     case t
       of Term.I => C2.cast C2.I

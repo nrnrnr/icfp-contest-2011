@@ -36,3 +36,4 @@ structure StringCard : CARD = struct
   val revive = "revive"
   val zombie = "zombie"
 end
+
