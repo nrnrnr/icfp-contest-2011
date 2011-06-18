@@ -1,28 +1,34 @@
 structure Term = struct
-  datatype 'a t
+  datatype 'a card
     = I | S | K | put
     | zero | succ | dbl
     | get | copy
     | inc | dec | attack | help | revive | zombie
 
+  datatype 'a t
+    = C  of 'a card
     | P1 of 'a partial1  (* partial applications of a term *)
     | P2 of 'a partial2
     | N  of int
-  withtype 'a partial1 = 'a t * 'a t
+  withtype 'a partial1 = 'a card * 'a t
       and  'a partial2 = 'a partial1 * 'a t
 
-  fun cast t =
-    case t
+  fun cast c =
+    case c
       of I => I | S => S | K => K | put => put
        | zero => zero | succ => succ | dbl => dbl
        | get => get | copy => copy
        | inc => inc | dec => dec | attack => attack
        | help => help | revive => revive | zombie => zombie
+
+  fun castTerm t =
+    case t
+      of C c => C (cast c)
        | N n => N n
        | P1 p => P1 (cast1 p)
        | P2 p => P2 (cast2 p)
-  and cast1 (t1, t2) = (cast t2, cast t2)
-  and cast2 (p, t) = (cast1 p, cast t)
+  and cast1 (c, t) = (cast c, castTerm t)
+  and cast2 (p, t) = (cast1 p, castTerm t)
 
 end
 
@@ -39,8 +45,6 @@ end
 functor TranslateTerm(Card2 : CARD) : CARD_TRANSLATE = struct
   structure C1 = TermCard
   structure C2 = Card2
-  exception TxError of string
-  fun fail what = raise TxError ("Tried to translate a " ^ what)
   fun translate t =
     case t
       of Term.I => C2.cast C2.I
@@ -58,14 +62,25 @@ functor TranslateTerm(Card2 : CARD) : CARD_TRANSLATE = struct
        | Term.help => C2.cast C2.help
        | Term.revive => C2.cast C2.revive
        | Term.zombie => C2.cast C2.zombie
-       | Term.N n => fail "integer"
-       | Term.P1 p => fail "partial application"
-       | Term.P2 p => fail "partial application"
 end
 
 
+functor ShowTerm(val showCard : 'a Term.t -> string) = struct
+  structure T = Term
+  fun bracket s = "(" ^ s ^ ")"
+  fun nobracket s = s
+
+(*
+  fun show br t =
+    case t
+      of T.N n => Int.toString n
+       | Term.P1 (f, arg) => 
+    | 
+*)
 
 (* to apply a function a[i] to a[0]
      S (K a[i]) get zero
 *)
+
+end
 
