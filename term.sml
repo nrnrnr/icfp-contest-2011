@@ -1,3 +1,9 @@
+
+(* to apply a function a[i] to a[0]
+     S (K a[i]) get zero
+*)
+
+
 structure Term = struct
   datatype 'a card
     = I | S | K | put
@@ -65,22 +71,19 @@ functor TranslateTerm(Card2 : CARD) : CARD_TRANSLATE = struct
 end
 
 
-functor ShowTerm(val showCard : 'a Term.t -> string) = struct
+functor ShowTerm(val showCard : 'a Term.card -> string) = struct
   structure T = Term
   fun bracket s = "(" ^ s ^ ")"
   fun nobracket s = s
 
-(*
-  fun show br t =
+  fun show' br t =
     case t
-      of T.N n => Int.toString n
-       | Term.P1 (f, arg) => 
-    | 
-*)
+      of T.C c => showCard c
+       | T.N n => Int.toString n
+       | Term.P1 (c, arg) => br (showCard c ^ " " ^ show' bracket arg)
+       | Term.P2 (t, arg) => br (show' nobracket (Term.P1 t) ^ " " ^ show' bracket arg)
 
-(* to apply a function a[i] to a[0]
-     S (K a[i]) get zero
-*)
-
+  fun show t = show' nobracket t
 end
+
 
