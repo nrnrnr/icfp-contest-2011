@@ -1,7 +1,4 @@
 signature VALUE = sig
-  type clock  (* mutable clock *)
-  val clock : unit -> clock  (* fresh clock *)
-  val reset_clock : clock -> unit (* make clock fresh *)
   exception Error of string
   datatype 'a v = N of int
                 | F of unit v -> unit v  (* invariant: arrow includes clock tick *)
@@ -12,23 +9,10 @@ signature VALUE = sig
   val toInt : int v -> int
   val toFun : ('a -> 'b) v -> ('a v -> 'b v)
         (* function returned ticks internal clock every time it is applied *)
-    
-  val with_clock : clock -> ('a -> 'b) -> ('a -> 'b)
-    (* makes function application tick *)
 end
 
 structure Value :> VALUE = struct
   exception Error of string
-  type clock = { apps_left : int ref } (* number of applications remaining *)
-  val stdClock = 1000  (* number of ticks on a standard clock *)
-  fun clock () = { apps_left = ref stdClock }
-  fun reset_clock { apps_left } = apps_left := stdClock
-
-  fun with_clock { apps_left } f a =
-    if !apps_left > 0 then
-      f a before apps_left := !apps_left - 1
-    else
-      raise Error "hit the application limit"
 
   datatype 'a v = N of int
                 | F of unit v -> unit v
@@ -50,7 +34,7 @@ end
 
 functor RunFn(structure Value : VALUE
             type vitality = int
-            val this_clock : Value.clock
+            val this_clock : Clock.t
             val automatic : bool ref (* are we in the auto phase? *)
             val proponent : (vitality * unit Value.v) array
             val opponent  : (vitality * unit Value.v) array
@@ -67,12 +51,12 @@ struct
   val untyped = cast
 
   type 'a pre_pair = { embed : 'a -> 'a v, project : 'a v -> 'a }
-  type 'a pair = clock -> 'a pre_pair
+  type 'a pair = Clock.t -> 'a pre_pair
   structure B = struct (* bijection *)
     val int : int pair = fn _ => { embed = N, project = toInt }
     fun --> (arg : 'a pair, res : 'b pair) : ('a -> 'b) pair = fn clock => 
       let val (arg, res) = (arg clock, res clock)
-          val c = with_clock clock
+          val c = Clock.tick clock
       in  { embed   =
              (fn f => cast (F (cast o #embed res o c f o #project arg o cast)))
                       : ('a -> 'b) -> ('a -> 'b) v
@@ -82,7 +66,7 @@ struct
       end
     val a : 'a v pre_pair = { embed = cast, project = cast }
     val id : unit pair = fn clock =>
-        { embed   = fn () => F (with_clock clock (fn x => x))
+        { embed   = fn () => F (Clock.tick clock (fn x => x))
         , project = fn _ => ()
         }
   end
@@ -106,12 +90,13 @@ struct
 
 
     fun I x = x
-    val I = F (fn v => asFun (a --> a) I v)
     fun S f g x = f x (g x)
-    val S = F (fn v => asFun ((a --> b --> c) --> (a --> b) --> (a --> c)) S v)
     fun K x y = x
-    val K = F (fn v => asFun (a --> b --> a) K v)
     fun put x y = y
+
+    val I = F (fn v => asFun (a --> a) I v)
+    val S = F (fn v => asFun ((a --> b --> c) --> (a --> b) --> (a --> c)) S v)
+    val K = F (fn v => asFun (a --> b --> a) K v)
     val put = F (fn v => asFun (a --> b --> a) put v)
 
   (* numbers *)
@@ -143,6 +128,7 @@ struct
 
   fun get  slot = field (our   slot)
   fun copy slot = field (their slot)
+
   val get  = F (fn v => asFun (Bint --> a) get v)
   val copy = F (fn v => asFun (Bint --> a) copy v)
 
@@ -219,7 +205,7 @@ struct
   fun slotToCard slot card =
         slot <=: toFun' (liveField (our slot)) card handle _ => slot <=: I
 
-  fun with_fresh_clock f x y = (Value.reset_clock this_clock; f x y)
+  fun with_fresh_clock f x y = (Clock.reset this_clock; f x y)
   val cardToSlot = fn x => with_fresh_clock cardToSlot x
   val slotToCard = fn y => with_fresh_clock slotToCard y
 end
@@ -248,8 +234,8 @@ functor RunTest (structure Move : MOVE
 struct
   type vitality = int
   val initial_vitality = 10000
-  val this_clock = Value.clock ()
-  val I : unit Value.v = Value.F (Value.with_clock this_clock (fn x => x))
+  val this_clock = Clock.mk ()
+  val I : unit Value.v = Value.F (Clock.tick this_clock (fn x => x))
   val slot = (initial_vitality, I)
   val slots1 = Array.tabulate (256, fn _ => slot)
   val slots2 = Array.tabulate (256, fn _ => slot)
