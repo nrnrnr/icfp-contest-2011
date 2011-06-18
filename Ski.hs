@@ -3,7 +3,20 @@ import Test.QuickCheck
 import Prelude hiding (abs)
 
 data C = S | K | I | C :@: C | CVar String
-  deriving (Show, Eq)
+  deriving (Eq)
+           
+bracket s = "(" ++ s ++ ")"
+nobracket s = s
+
+cs br (c1 :@: c2) = br (cs nobracket c1 ++ " :@: " ++ cs bracket c2)
+cs br S = "S"
+cs br K = "K"
+cs br I = "I"
+cs br (CVar x) = x
+
+instance Show C where
+  show = cs nobracket
+  
 
 cnormal :: C -> C
 cnormal (t :@: t') =
