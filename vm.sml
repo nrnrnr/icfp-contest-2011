@@ -47,6 +47,9 @@ struct
               ('a -> 'b) v -> 'a -> 'b
         }
     val a : 'a v pair = { embed = cast, project = cast }
+    val id : unit pair = { embed   = fn () => F (fn x => x)
+                         , project = fn _ => ()
+                         }
   end
   val --> = B.-->
   infixr 2 -->                          
@@ -109,27 +112,20 @@ struct
 
   fun inc slot =
     let val v = vitality (our slot)
-        val _ =
-            if v > 0 andalso v < 65535 then
-                slot <-: v + 1
-            else
-                ()
-    in  I
+    in  if v > 0 andalso v < 65535 then
+          slot <-: v + 1
+        else
+            ()
     end
 
   fun dec slot' =
     let val slot = 255 - slot'
         val v = vitality (their slot)
-        val _ =
-            if v > 0 then
-                v - 1 :-> slot
-            else
-                ()
-    in  I
+    in  if v > 0 then v - 1 :-> slot else ()
     end
 
-  val inc = F (fn v => cast (inc (toInt (cast v))))
-  val dec = F (fn v => cast (dec (toInt (cast v))))
+  val inc = F (fn v => asFun (B.int --> B.id) inc v)
+  val dec = F (fn v => asFun (B.int --> B.id) dec v)
 
   fun take_n_from_our n slot = 
     let val v = vitality (our slot)
@@ -143,22 +139,29 @@ struct
     let val _ = take_n_from_our n slot
         val delta = (9 * n) div 10
         val w = vitality (their' slot')
-        val _ = if w > 0 then pin0 (w - delta) :-> 255 - slot' else ()
-    in  I
+    in  if w > 0 then pin0 (w - delta) :-> 255 - slot' else ()
     end
 
   fun help from to n =
     let val _ = take_n_from_our n from
         val delta = (11 * n) div 10
         val w = vitality (our to)
-        val _ = if w > 0 then to <-: pin (w + delta) else ()
-    in  I
+    in  if w > 0 then to <-: pin (w + delta) else ()
     end
             
-  val attack = F (fn v => asFun (B.int --> B.int --> B.int --> B.a) attack v)
-  val help   = F (fn v => asFun (B.int --> B.int --> B.int --> B.a) help   v)
-  val revive = F undefined
-  val zombie = F undefined
+  fun revive slot = if vitality (our slot) <= 0 then slot <-: 1 else ()
+  fun zombie slot' x =
+    let val v = vitality (their' slot')
+    in  if v > 0 then
+          raise Error "tried to zombie a live slot"
+        else
+          Array.update (opponent, 255-slot', (~1, x))
+    end
+
+  val attack = F (fn v => asFun (B.int --> B.int --> B.int --> B.id) attack v)
+  val help   = F (fn v => asFun (B.int --> B.int --> B.int --> B.id) help   v)
+  val revive = F (fn v => asFun (B.int --> B.id) revive v)
+  val zombie = F (fn v => asFun (B.int --> B.a --> B.id) zombie v)
 
 
 
