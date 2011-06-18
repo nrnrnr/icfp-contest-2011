@@ -3,3 +3,4 @@ group is
   card.sml
   vm.sml
   combo.sml
+  term.sml

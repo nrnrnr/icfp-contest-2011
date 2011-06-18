@@ -4,5 +4,6 @@ in
  card.sml
  vm.sml
  combo.sml
+ term.sml
 end
 
