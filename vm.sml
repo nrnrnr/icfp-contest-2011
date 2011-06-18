@@ -29,6 +29,7 @@ end
 
 functor Run(structure Value : VALUE
             type vitality = int
+            val automatic : bool ref (* are we in the auto phase? *)
             val proponent : (vitality * 'a Value.v) array
             val opponent  : (vitality * 'a Value.v) array
             ) : CARD where type 'a card = 'a Value.v = 
@@ -80,8 +81,9 @@ struct
 
   (* numbers *)
 
-  fun pin n = if n < 65535 then 65535 else n
-  fun pin0 n = if n < 0 then 0 else n
+  fun pinhi n = if n < 65535 then 65535 else n
+  fun pinlo n = if n < 0 then 0 else n
+  val pin = pinhi o pinlo
 
   val zero = #embed B.int 0
   val succ = #embed (B.int --> B.int) (fn n => pin (n + 1))
@@ -110,18 +112,21 @@ struct
   (* vitality *)
   fun undefined x = undefined x
 
+  fun increase slot v = if v > 0 andalso v < 65535 then slot <-: v + 1 else ()
+  fun decrease slot v = if v > 0                   then slot <-: v - 1 else ()
+
   fun inc slot =
     let val v = vitality (our slot)
-    in  if v > 0 andalso v < 65535 then
-          slot <-: v + 1
+    in  if !automatic then
+          decrease slot v
         else
-            ()
+          increase slot v
     end
 
   fun dec slot' =
     let val slot = 255 - slot'
         val v = vitality (their slot)
-    in  if v > 0 then v - 1 :-> slot else ()
+    in  if !automatic then increase slot v else decrease slot v
     end
 
   val inc = F (fn v => asFun (B.int --> B.id) inc v)
@@ -139,12 +144,15 @@ struct
     let val _ = take_n_from_our n slot
         val delta = (9 * n) div 10
         val w = vitality (their' slot')
-    in  if w > 0 then pin0 (w - delta) :-> 255 - slot' else ()
+        val new_w = pin (if !automatic then if w > 0 then w + delta else w
+                         else w - delta)
+    in  if w > 0 then new_w :-> 255 - slot' else ()
     end
 
   fun help from to n =
     let val _ = take_n_from_our n from
         val delta = (11 * n) div 10
+        val delta = if !automatic then ~delta else delta
         val w = vitality (our to)
     in  if w > 0 then to <-: pin (w + delta) else ()
     end
