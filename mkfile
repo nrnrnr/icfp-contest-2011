@@ -5,4 +5,4 @@ all:V:
 mlton:V: sim
 
 sim: `echo *.sml *.mlb`
-	mlton -output $target -verbose 1 main.mlb
+	mlton -cc-opt -static -link-opt -static -output $target -verbose 1 main.mlb
