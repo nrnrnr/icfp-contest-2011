@@ -41,6 +41,12 @@ struct
         app print [player, " applied card ", c, " to slot ", Int.toString s, "\n"]
     | printMove player (M.SlotToCard (s, c)) =
         app print [player, " applied slot ", Int.toString s, " to card ", c, "\n"]
+  fun quietMove player (M.CardToSlot (c, s)) =
+        app print ["1\n", c, "\n", Int.toString s, "\n"]
+    | quietMove player (M.SlotToCard (s, c)) =
+        app print ["2\n", Int.toString s, "\n", c, "\n"]
+
+  val printMove = if prompt then printMove else quietMove
 
   fun readMove player =
     case prompter "(1) apply card to slot, or (2) apply slot to card?"
