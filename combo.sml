@@ -52,6 +52,8 @@ struct
 
   fun compose f g = (S :@: (K :@: f)) :@: ((S :@: (K :@: g)) :@: I)
 
+  val compose' = S :@: (K :@: S) :@: K
+
   fun self f      = S :@: (K :@: (K :@: f)) :@: (S :@: (K :@: f) :@: I)
 
   fun self' f = (fn x => f) o f
