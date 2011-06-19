@@ -5,8 +5,8 @@ signature MOVE_IO = sig
   val readMove  : player -> Move.t
 end
 
-functor MoveIO(structure Move : MOVE where type 'a Card.card = string
-               val prompt : bool) : MOVE_IO where type Move.t = Move.t
+functor MoveIOFn(structure Move : MOVE where type 'a Card.card = string
+                 val prompt : bool) : MOVE_IO where type Move.t = Move.t
  =
 struct
   structure Move = Move

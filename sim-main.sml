@@ -4,15 +4,16 @@ functor SimMainFn(structure Sim : SIMULATOR
                   structure Move : MOVE where type 'a Card.card = string
                   structure Tx : CARD_TRANSLATE
                       where type 'a C1.card = 'a Move.Card.card
-                        and type 'a C2.card = 'a TermCard.card
-                  structure IO : MOVE_IO 
-                      sharing type IO.Move.t = Move.t) :
+                        and type 'a C2.card = 'a TermCard.card) :
     sig
         val runAlt : unit -> unit   (* players 1 and 2 alternate *)
         val runOnly : unit -> unit  (* player 1 runs alone *)
     end
   =
 struct
+    structure IO = MoveIOFn(structure Move = Move
+                            val prompt = true)
+
     structure TxMove = TxMoveFn(structure M1 = Move
                                 structure M2 = Sim.Move
                                 structure Tx = Tx)
@@ -62,4 +63,13 @@ struct
 
     fun runAlt  () = run (fn _ => false)
     fun runOnly () = run (fn S.P1 => false | S.P2 => true)
+
+    val arg0 = CommandLine.name()
+    val _ = case CommandLine.arguments()
+              of ["only"] => runOnly ()
+               | ["alt"] => runAlt ()
+                  | _ => app print ["Usage: ", arg0, " only\n",
+                                    "              (one player)\n",
+                                    "       ", arg0, " alt\n",
+                                    "              (two players)\n"]
 end
