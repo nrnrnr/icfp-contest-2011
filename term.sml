@@ -96,8 +96,13 @@ functor TermCombinatorsFn (val clock : Clock.t
                                                  and type slot' = int
                                                  and type u = unit
                                                  and type field = TermCard.unitype Term.t
-                          ) : COMBINATORS = struct
+                          ) : sig
+                                include COMBINATORS
+                                val clock : Clock.t
+                              end = 
+struct
   structure Card = TermCard
+  val clock = clock
   open Term
 
   infix 3 @@ @-@
