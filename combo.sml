@@ -50,13 +50,13 @@ struct
   (* assume an exp is represented as a term which, when evaluated,
      returns the value *)
 
-  fun compose f g = (S :@: (K :@: f)) :@: ((S :@: (K :@: g)) :@: I)
+  fun oldcompose f g = (S :@: (K :@: f)) :@: ((S :@: (K :@: g)) :@: I)
 
   val compose' = S :@: (K :@: S) :@: K
-
-  fun self f      = S :@: (K :@: (K :@: f)) :@: (S :@: (K :@: f) :@: I)
+  fun compose f g = compose' :@: f :@: g
 
   fun self' f = (fn x => f) o f
+  fun self f = compose (K :@: f) f
 
   structure Test = struct
     fun self_compose_law f = self f = compose (K :@: f) f
