@@ -18,7 +18,7 @@ struct
       ; TextIO.flushOut TextIO.stdOut
       ; case TextIO.inputLine TextIO.stdIn
           of SOME s => s
-           | NONE => prompt s
+           | NONE => OS.Process.exit OS.Process.success
       )
     fun noprompt (_ : string) =
       case TextIO.inputLine TextIO.stdIn
