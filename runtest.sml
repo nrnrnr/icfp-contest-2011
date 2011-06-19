@@ -1,23 +1,17 @@
-functor RunTest (structure Move : MOVE
+(*
+functor RunTermFn(structure Move : MOVE
                  structure Tx : CARD_TRANSLATE
                      where type 'a C1.card = 'a Move.Card.card
-                       and type 'a C2.card = 'a Value.v
+                       and type 'a C2.card = 'a Term.card
                  val player1 : Move.t option -> Move.t
                  val player2 : Move.t option -> Move.t) = 
 struct
   type vitality = int
-  val initial_vitality = 10000
-  val this_clock = Clock.mk ()
-  val I : unit Value.v = Value.F (Clock.tick this_clock (fn x => x))
-  val slot = (initial_vitality, I)
-  val slots1 = Array.tabulate (256, fn _ => slot)
-  val slots2 = Array.tabulate (256, fn _ => slot)
-  val automatic = ref false
 
   structure Run1 = RunFn
       (structure Value = Value
        type vitality = int
-       val this_clock = this_clock
+       val this_clock = clock
        val automatic = automatic
        val proponent = slots1
        val opponent = slots2)
@@ -25,7 +19,7 @@ struct
   structure Run2 = RunFn
       (structure Value = Value
        type vitality = int
-       val this_clock = this_clock
+       val this_clock = clock
        val automatic = automatic
        val proponent = slots2
        val opponent = slots1)
@@ -75,3 +69,6 @@ struct
 end
 
                    
+*)
+
+structure M = struct val x =99 end
