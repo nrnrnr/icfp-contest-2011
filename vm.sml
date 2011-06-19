@@ -5,13 +5,30 @@ signature VM = sig
                  and type u = unit
   exception Error of string
 end
+
+signature VM_PAIR = sig
+  type vitality = int
+  structure Player1 : VM
+  structure Player2 : VM
+  sharing type Player1.field = Player2.field
+      and type Player1.unitype = Player2.unitype
+  val clock : Clock.t
+  val automatic : bool ref
+  val slots1 : (vitality * Player1.field) array
+  val slots2 : (vitality * Player2.field) array
+end
+
+structure Unitype : sig type t end = struct
+  datatype t = U of t
+end
+
 functor VMFn(type field
              type vitality = int
              val this_clock : Clock.t
              val automatic : bool ref (* are we in the auto phase? *)
              val proponent : (vitality * field) array
              val opponent  : (vitality * field) array
-            ) :> VM where type field = field
+            ) :> VM where type field = field and type unitype = Unitype.t
  =
 struct
   type 'a card = 'a
@@ -20,7 +37,7 @@ struct
                      end
 
   exception Error of string
-  datatype unitype = U of unitype
+  type unitype = Unitype.t
   fun untyped t = impossible "untyped VM instruction"
   fun cast f = impossible "cast VM instruction"
   type u = unit
@@ -113,5 +130,33 @@ struct
         else
           Array.update (opponent, 255-slot', (~1, x))
     end
+end
+
+
+functor VMPairFn(type field
+                 val initialField : field) : VM_PAIR where type Player1.field = field
+  =
+struct
+  type vitality = int
+  val initial_vitality = 10000
+  val clock = Clock.mk ()
+  val slot = (initial_vitality, initialField)
+  val slots1 = Array.tabulate (256, fn _ => slot)
+  val slots2 = Array.tabulate (256, fn _ => slot)
+  val automatic = ref false
+
+  structure Player1 = VMFn(type vitality  = int
+                           type field     = field
+                           val this_clock = clock
+                           val automatic  = automatic
+                           val proponent  = slots1
+                           val opponent   = slots2)
+
+  structure Player2 = VMFn(type vitality  = int
+                           type field     = field
+                           val this_clock = clock
+                           val automatic  = automatic
+                           val proponent  = slots2
+                           val opponent   = slots1)
 end
 
