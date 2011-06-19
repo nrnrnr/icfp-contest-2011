@@ -2,8 +2,10 @@ group is
   $/basis.cm
   card.sml
   vm.sml
-  ovm.sml
+  funvm.sml
   combo.sml
   term.sml
   stringcard.sml
   clock.sml
+  move.sml
+  runtest.sml
