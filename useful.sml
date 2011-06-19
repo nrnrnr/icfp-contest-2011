@@ -5,17 +5,17 @@ functor UsefulFn (Move : MOVE where type Card.slot = int) :
                                                     leaving result in slot i
                                                   *)
     val apply_to_literal : slot -> int -> Move.t list (* a[i] := a[i](n) *)
-    val loadCompose : slot -> Move.t list (* load the compose function into slot j,
-                                             assuming it is initially the identity
+    val loadCompose : slot -> Move.t list (* load the compose function into slot j
                                            *)
-    val copyItoJ : slot -> slot -> Move.t list (* copy slot i to slot j,
-                                                  assuming j holds the identity *)
+    val copyItoJ : slot -> slot -> Move.t list (* copy slot i to slot j *)
+
     val makeId : slot -> Move.t list  (* put I in the slot *)
-    val loadN : slot -> int -> Move.t list   (* load N into the slot, assuming it holds I *)
+    val loadN : slot -> int -> Move.t list   (* load N into the slot *)
 
     val mutualHelpUsing : slot -> slot -> slot -> int -> Move.t list
     val mutualTmps : { code : slot, t1 : slot, t2 : slot, t3 : slot } ->
         slot -> slot -> int -> Move.t list
+    val mutualTmp : { code : slot, tN : slot } -> slot -> slot -> int -> Move.t list
 
     val attack : slot -> int -> int -> int -> Move.t list
     val help   : slot -> int -> int -> int -> Move.t list
@@ -90,11 +90,11 @@ struct
     val compose = (C.S :@> (C C.K <@: C.S)) <@: C.K : Unitype.t t
   end
 
-  fun loadCompose slot = G.loadTerm slot Terms.compose
-
   fun makeId slot = [M.CardToSlot (C.cast C.put, slot)]
 
-  fun loadN slot n = G.loadTerm slot (Terms.num n)
+  fun loadCompose slot = makeId slot @ G.loadTerm slot Terms.compose
+
+  fun loadN slot n = makeId slot @ G.loadTerm slot (Terms.num n)
 
   fun copyItoJ from to =
     loadN to from @ [M.CardToSlot (C.cast C.get, to)]
@@ -120,10 +120,17 @@ struct
 
   fun mutualHelpUsing slot i j n = help slot i j n @ help slot j i n
   fun mutualTmps { code : slot, t1 : slot, t2 : slot, t3 : slot } i j n =
-     makeId t1 @ loadN t1 i @ makeId t2 @ loadN t2 j @ makeId t3 @ loadN t3 n @
+     loadN t1 i @ loadN t2 j @ loadN t3 n @
      makeId code @
      [Move.SlotToCard (code, C.cast C.help)] @
      applyItoJ code t1 @ applyItoJ code t2 @ applyItoJ code t3 @
      [Move.SlotToCard (code, C.cast C.help)] @
      applyItoJ code t2 @ applyItoJ code t1 @ applyItoJ code t3
+  fun mutualTmp { code : slot, tN : slot } i j n =
+     loadN tN n @
+     makeId code @
+     [Move.SlotToCard (code, C.cast C.help)] @
+     apply_to_literal code i @ apply_to_literal code j @ applyItoJ code tN @
+     [Move.SlotToCard (code, C.cast C.help)] @
+     apply_to_literal code j @ apply_to_literal code i @ applyItoJ code tN
 end  
