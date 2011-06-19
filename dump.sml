@@ -3,12 +3,13 @@ structure Dump = struct
 
   fun slots a =
       (* flagrantly violates single point of truth *)
-    let fun dump 256 = ()
-          | dump i = case Array.sub (a, i)
+    let fun dump i = case Array.sub (a, i)
                        of (10000, Term.C Term.I) => () (* do nothing *)
                         | (v, f) => app print [intstring i, "={",
                                                intstring v, ",",
                                                ShowTerm.show f, "}\n"]
-    in  dump 0
+        fun all 256 = ()
+          | all i = (dump i; all (i + 1))
+    in  all 0
     end
 end
