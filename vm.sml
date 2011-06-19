@@ -50,7 +50,7 @@ struct
 
   (* numbers *)
 
-  fun pinhi n = if n < 65535 then 65535 else n
+  fun pinhi n = if n > 65535 then 65535 else n
   fun pinlo n = if n < 0 then 0 else n
   val pin = pinhi o pinlo
 
