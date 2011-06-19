@@ -40,26 +40,6 @@ structure StringCard : CARD = struct
   val help   = "help"
   val revive = "revive"
   val zombie = "zombie"
-
-  exception Failed of string
-  fun translate t =
-    case t
-      of "I" => C2.cast C2.I
-       | "S" => C2.cast C2.S
-       | "K" => C2.cast C2.K
-       | "put" => C2.cast C2.put
-       | "zero" => C2.cast C2.zero
-       | "succ" => C2.cast C2.succ
-       | "dbl" => C2.cast C2.dbl
-       | "get" => C2.cast C2.get
-       | "copy" => C2.cast C2.copy
-       | "inc" => C2.cast C2.inc
-       | "dec" => C2.cast C2.dec
-       | "attack" => C2.cast C2.attack
-       | "help" => C2.cast C2.help
-       | "revive" => C2.cast C2.revive
-       | "zombie" => C2.cast C2.zombie
-       | _ => raise Failed
 end
 
 functor TranslateStringFn(Card2 : CARD) : CARD_TRANSLATE = struct
