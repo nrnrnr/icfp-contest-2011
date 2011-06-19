@@ -37,3 +37,26 @@ structure StringCard : CARD = struct
   val zombie = "zombie"
 end
 
+functor TranslateStringFn(Card2 : CARD) : CARD_TRANSLATE = struct
+  structure C1 = StringCard
+  structure C2 = Card2
+  exception Failed of string
+  fun translate t =
+    case t
+      of "I" => C2.cast C2.I
+       | "S" => C2.cast C2.S
+       | "K" => C2.cast C2.K
+       | "put" => C2.cast C2.put
+       | "zero" => C2.cast C2.zero
+       | "succ" => C2.cast C2.succ
+       | "dbl" => C2.cast C2.dbl
+       | "get" => C2.cast C2.get
+       | "copy" => C2.cast C2.copy
+       | "inc" => C2.cast C2.inc
+       | "dec" => C2.cast C2.dec
+       | "attack" => C2.cast C2.attack
+       | "help" => C2.cast C2.help
+       | "revive" => C2.cast C2.revive
+       | "zombie" => C2.cast C2.zombie
+       | s => raise Failed ("'" ^ s ^ "' does not name any card")
+end
