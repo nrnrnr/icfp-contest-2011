@@ -11,5 +11,6 @@ in
   runtest.sml
   combo.sml
   dump.sml
+  useful.sml
 end
 

@@ -10,3 +10,4 @@ group is
   move.sml
   runtest.sml
   dump.sml
+  useful.sml

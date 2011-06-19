@@ -1,8 +1,9 @@
 module Ski where
-import Test.QuickCheck
+--import Test.QuickCheck
 import Prelude hiding (abs)
+import qualified List
 
-data C = S | K | I | C :@: C | CVar String
+data C = S | K | I | P | C :@: C | CVar String
   deriving (Eq)
            
 bracket s = "(" ++ s ++ ")"
@@ -12,6 +13,7 @@ cs br (c1 :@: c2) = br (cs nobracket c1 ++ " :@: " ++ cs bracket c2)
 cs br S = "S"
 cs br K = "K"
 cs br I = "I"
+cs br P = "P"
 cs br (CVar x) = x
 
 instance Show C where
@@ -24,8 +26,46 @@ cnormal (t :@: t') =
     (I, x) -> x
     (K :@: x, y) -> x
     ((S :@: x) :@: y, z) -> cnormal $ (x :@: z) :@: (y :@: z)
+    (P, _) -> I
     (f, a) -> f :@: a
 cnormal base = base
+
+isNormal c = cnormal c == c
+
+cterms :: [[C]]
+leaves :: [C]
+appnodes :: Int -> [C]
+
+increase :: [[C]] -> [C]
+  -- argument: C terms with 0..n-1 app nodes
+  -- result  : C terms with n app nodes
+increase css = concat $ zipWith combine css (reverse css)
+    where combine cs1 cs2 = filter isNormal [ c1 :@: c2 | c1 <- cs1, c2 <- cs2 ]
+leaves = [S, K, I, P]
+appnodes 0 = leaves
+appnodes n = increase (take n cterms)
+cterms = map appnodes [0..]
+
+equiv c args c' = cnormal (foldl (\ c x -> c :@: CVar x) c args) == cnormal c'
+
+isCompose c = equiv c ["f", "g", "x"] (CVar "f" :@: (CVar "g" :@: CVar "x"))
+isApp c = equiv c ["f", "x"] (cf :@: cx)
+
+findC :: (C -> Bool) -> C
+
+findC p = search cterms
+   where search (cs:css) = case List.find p cs of
+                             Just c -> c
+                             Nothing -> search css
+
+
+compose' = S :@: (K :@: S) :@: K
+
+cf = CVar "f"
+cg = CVar "g"
+cx = CVar "x"
+cy = CVar "y"
+cz = CVar "z"
 
 -- N.B. it would be good to automate normalization and with 
 -- extensional equality
