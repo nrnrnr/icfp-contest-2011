@@ -47,9 +47,9 @@ struct
             val _ = case player
                       of S.P1 => app print ["###### turn ", Int.toString turn, "\n"]
                        | S.P2 => ()
-            val _ = app print ["*** ", playerString player, "'s turn, with slots:\n"]
+            val _ = app print ["*** ", playerString player, "'s turn, with slots:\n",
+                               "(slots {10000,I} are omitted)\n"]
             val _ = Dump.slots slots
-            val _ = app print ["(slots {10000,I} are omitted)\n"]
             val move = getMove (playerString player)
             val _ = printMove (playerString player) move
             val move = TxMove.translate move

@@ -36,6 +36,8 @@ struct
     val (p, np) = (strip_newline o prompt, strip_newline o noprompt)
   end
   val prompter = if prompt then p else np
+
+  structure Tx = TranslateStringFn(StringCard)
   
   fun printMove player (M.CardToSlot (c, s)) =
         app print [player, " applied card ", c, " to slot ", Int.toString s, "\n"]
@@ -63,7 +65,8 @@ struct
             val card = readCard ()
         in  M.SlotToCard (slot, card)
         end
-  and readCard () = prompter "card name?"
+  and readCard () =
+        Tx.translate (prompter "card name?") handle Tx.Failed _ => readCard ()
   and readSlot () =
         case Int.fromString (prompter "slot no?")
           of SOME n => n
