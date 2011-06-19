@@ -8,6 +8,6 @@ group is
   stringcard.sml
   clock.sml
   move.sml
-  runtest.sml
+  simulator.sml
   dump.sml
   useful.sml

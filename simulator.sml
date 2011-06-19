@@ -1,3 +1,23 @@
+signature SIMULATOR = sig
+  (* simulates one and only one game, destructively *)
+  structure Move : MOVE
+  type field
+  type vitality = int
+  datatype player = P1 | P2
+  datatype state =  (* all elements should be treated as read only *)
+      S of { slots1 : (vitality * field) array
+           , slots2 : (vitality * field) array
+           , whose_turn : player ref
+           , lastmove   : Move.t option ref
+           , half_turns_remaining : int ref
+           }
+  val game      : state (* P1 always moves first *)
+  val step      : Move.t -> unit  (* updates the current 'game' state *)
+  val game_over : unit -> bool
+  val length_in_full_turns : int (* length of a game in full turns *)
+end      
+
+
 functor InstructionsFn (structure VM : VM
                         type 'a card
                         val apply : VM.field * VM.field -> VM.field
@@ -16,18 +36,34 @@ functor InstructionsFn (structure VM : VM
   val slotToCard = fn y => with_fresh_clock slotToCard y
 end
 
+(*
 
-functor RunTermFn(structure Move : MOVE
-                 structure Tx : CARD_TRANSLATE
-                     where type 'a C1.card = 'a Move.Card.card
-                       and type 'a C2.card = 'a Term.card
-                 val player1 : Move.t option -> Move.t
-                 val player2 : Move.t option -> Move.t) = 
+              structure Tx : CARD_TRANSLATE
+                      where type 'a C1.card = 'a Move.Card.card
+                        and type 'a C2.card = 'a Term.card
+                  val player1 : Move.t option -> Move.t
+                  val player2 : Move.t option -> Move.t) :
+*)
+
+functor SimFn(val debug : bool) : SIMULATOR 
+ = 
 struct
   structure T = Term
+  structure Move = MoveFn(TermCard)
   type vitality = int
   type field = Unitype.t Term.t
   val I = Term.C Term.I
+
+  datatype player = P1 | P2
+  datatype state =
+      S of { slots1 : (vitality * field) array
+           , slots2 : (vitality * field) array
+           , whose_turn : player ref
+           , lastmove   : Move.t option ref
+           , half_turns_remaining : int ref
+           }
+  val length_in_full_turns = 100000  
+
   fun untyped apply (f, x) = Term.castTerm (apply (Term.castTerm f, Term.castTerm x))
 
   structure VMs = VMPairFn(type field = field
@@ -50,29 +86,69 @@ struct
                                 val card  = C2.card
                                 val I = I)
 
-  datatype player = P of { getmove : Move.t option -> Move.t
-                         , slots   : (vitality * field) array
+
+  datatype playerinfo = P of 
+                         { slots   : (vitality * field) array
                          , cs : Unitype.t Term.card -> int -> unit
                          , sc : int -> Unitype.t Term.card -> unit
                          }
 
-  val p1 = P { getmove = player1
-             , slots   = VMs.slots1
+  val game as S record = S { slots1 = VMs.slots1
+                           , slots2 = VMs.slots2
+                           , whose_turn = ref P1
+                           , lastmove   = ref NONE
+                           , half_turns_remaining = ref (2 * length_in_full_turns)
+                           }
+
+  val game = S record
+
+  val p1 = P { slots   = #slots1 record
              , cs = I1.cardToSlot
              , sc = I1.slotToCard
              }
 
-  val p2 = P { getmove = player2
-             , slots   = VMs.slots2
+  val p2 = P { slots   = #slots2 record
              , cs = I2.cardToSlot
              , sc = I2.slotToCard
              }
 
-  val tx = Tx.translate
+  fun otherplayer P1 = P2
+    | otherplayer P2 = P1
 
-  fun unP (P record) = record
 
-  
+  fun allDead slots = Array.all (fn (v, _) => v <= 0) slots
+
+  fun game_over () =
+    ! (#half_turns_remaining record) = 0 orelse
+    allDead (#slots1 record) orelse allDead (#slots2 record)
+
+  fun step move =
+    let (* run the zombies *)
+        val _ = VMs.automatic := true
+        val whose_turn = #whose_turn record
+        val P player = case !whose_turn of P1 => p1 | P2 => p2
+        val slots = #slots player
+        fun runZombie slot = #sc player slot Term.I
+        fun run i =
+          let val (v, f) = Array.sub (slots, i)
+              val _ = if v = ~1 then runZombie i else ()
+          in  if i = 255 then () else run (i + 1)
+          end
+        val _ = run 0
+        val _ = VMs.automatic := false
+        val _ = (case move
+                   of Move.CardToSlot (c, slot) => #cs player c slot
+                    | Move.SlotToCard (slot, c) => #sc player slot c
+                ) handle Value.Error _ => ()
+                       | Subscript => ()
+                       | e => raise e  (* not good for production *)
+        val htr = #half_turns_remaining record
+        val _ = htr := !htr - 1
+        val _ = whose_turn := otherplayer (!whose_turn)
+    in  ()
+    end
+
+(*
 
   fun runAuto (P player) =
     let val _ = VMs.automatic := true
@@ -88,7 +164,6 @@ struct
     in  ()
     end
 
-  fun allDead player = Array.all (fn (v, _) => v <= 0) (#slots (unP player))
 
   fun halfturn n lastmove player otherplayer =
     let val _ = runAuto player
@@ -105,6 +180,6 @@ struct
           halfturn (n - 1) (SOME move) otherplayer player
     end
 
-  val total_turns = 100000  
   fun run () = halfturn (2 * total_turns) NONE p1 p2
+*)
 end

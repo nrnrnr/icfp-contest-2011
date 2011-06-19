@@ -8,7 +8,7 @@ in
   move.sml
   term.sml
   funvm.sml
-  runtest.sml
+  simulator.sml
   combo.sml
   dump.sml
   useful.sml
