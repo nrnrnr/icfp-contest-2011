@@ -72,8 +72,23 @@ struct
 
   fun unP (P record) = record
 
-  fun runAuto player = runAuto player (* not yet implemented *)
-  fun allDead player = allDead player (* not yet implemented *)
+  
+
+  fun runAuto (P player) =
+    let val _ = VMs.automatic := true
+        val slots = #slots player
+        fun runZombie slot = #sc player slot Term.I
+        fun run i =
+          let val (v, f) = Array.sub (slots, i)
+              val _ = if v = ~1 then runZombie i else ()
+          in  if i = 255 then () else run (i + 1)
+          end
+        val _ = run 0
+        val _ = VMs.automatic := false
+    in  ()
+    end
+
+  fun allDead player = Array.all (fn (v, _) => v <= 0) (#slots (unP player))
 
   fun halfturn n lastmove player otherplayer =
     let val _ = runAuto player
