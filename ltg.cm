@@ -11,3 +11,4 @@ group is
   simulator.sml
   dump.sml
   useful.sml
+  sim-main.sml

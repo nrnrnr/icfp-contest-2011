@@ -4,6 +4,7 @@ signature SIMULATOR = sig
   type field
   type vitality = int
   datatype player = P1 | P2
+  val otherplayer : player -> player
   datatype state =  (* all elements should be treated as read only *)
       S of { slots1 : (vitality * field) array
            , slots2 : (vitality * field) array
@@ -13,6 +14,7 @@ signature SIMULATOR = sig
            }
   val game      : state (* P1 always moves first *)
   val step      : Move.t -> unit  (* updates the current 'game' state *)
+  val skip_turn : unit -> unit    (* current player skips a turn *)
   val game_over : unit -> bool
   val length_in_full_turns : int (* length of a game in full turns *)
 end      
@@ -122,6 +124,15 @@ struct
     ! (#half_turns_remaining record) = 0 orelse
     allDead (#slots1 record) orelse allDead (#slots2 record)
 
+  fun advance_turn () =
+    let val whose_turn = #whose_turn record
+        val htr = #half_turns_remaining record
+        val _ = htr := !htr - 1
+        val _ = whose_turn := otherplayer (!whose_turn)
+    in  ()
+    end
+
+
   fun step move =
     let (* run the zombies *)
         val _ = VMs.automatic := true
@@ -142,11 +153,20 @@ struct
                 ) handle Value.Error _ => ()
                        | Subscript => ()
                        | e => raise e  (* not good for production *)
-        val htr = #half_turns_remaining record
-        val _ = htr := !htr - 1
-        val _ = whose_turn := otherplayer (!whose_turn)
+        val lastmove = #lastmove record
+        val _ = lastmove := SOME move
+        val _ = advance_turn ()
     in  ()
     end
+
+  fun skip_turn () =
+    let val lastmove = #lastmove record
+        val _ = lastmove := NONE
+        val _ = advance_turn ()
+    in  ()
+    end
+
+
 
 (*
 
