@@ -1,9 +1,14 @@
 local
   $(SML_LIB)/basis/basis.mlb
 in
- card.sml
- vm.sml
- combo.sml
- term.sml
+  clock.sml
+  card.sml
+  stringcard.sml
+  vm.sml
+  move.sml
+  term.sml
+  funvm.sml
+  runtest.sml
+  combo.sml
 end
 

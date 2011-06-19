@@ -1,10 +1,13 @@
+structure Unitype : sig type t end = struct
+  datatype t = U of t  (* type parameter given to untyped cards/terms/values *)
+end
+
 signature CARD = sig
   type slot
   type slot'
   type 'a card
 
-  type unitype
-  val untyped : 'a card -> unitype card
+  val untyped : 'a card -> Unitype.t card
   val cast : 'a card -> 'b card (* can't be helped *)
 
   (* combinators *)

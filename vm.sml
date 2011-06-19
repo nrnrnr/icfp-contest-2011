@@ -4,6 +4,9 @@ signature VM = sig
                  and type slot' = int
                  and type u = unit
   exception Error of string
+  val clock : Clock.t
+  val <=: : slot * field -> unit
+  val ourLiveField : slot -> field
 end
 
 signature VM_PAIR = sig
@@ -11,15 +14,10 @@ signature VM_PAIR = sig
   structure Player1 : VM
   structure Player2 : VM
   sharing type Player1.field = Player2.field
-      and type Player1.unitype = Player2.unitype
   val clock : Clock.t
   val automatic : bool ref
   val slots1 : (vitality * Player1.field) array
   val slots2 : (vitality * Player2.field) array
-end
-
-structure Unitype : sig type t end = struct
-  datatype t = U of t
 end
 
 functor VMFn(type field
@@ -28,16 +26,16 @@ functor VMFn(type field
              val automatic : bool ref (* are we in the auto phase? *)
              val proponent : (vitality * field) array
              val opponent  : (vitality * field) array
-            ) :> VM where type field = field and type unitype = Unitype.t
+            ) :> VM where type field = field 
  =
 struct
   type 'a card = 'a
+  val clock = this_clock
   fun impossible s = let exception ThisCan'tHappen of string
                      in  raise ThisCan'tHappen s
                      end
 
   exception Error of string
-  type unitype = Unitype.t
   fun untyped t = impossible "untyped VM instruction"
   fun cast f = impossible "cast VM instruction"
   type u = unit
@@ -68,6 +66,12 @@ struct
   fun our   slot = Array.sub (proponent, slot)
   fun their slot = Array.sub (opponent,  slot)
   fun their' slot' = their (255 - slot')
+
+  fun liveField x = if vitality x > 0 then field x
+                    else raise Error "pulled a field from a dead slot"
+
+  fun ourLiveField slot = liveField (our slot)
+
 
   infix 1 <-: :-> <=: :=>
 

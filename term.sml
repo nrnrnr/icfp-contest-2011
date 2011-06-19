@@ -15,8 +15,6 @@ structure Term = struct
     = C  of 'a card
     | N  of int
     | :@: of 'a t * 'a t  (* general application *)
-  withtype 'a partial1 = 'a card * 'a t
-      and  'a partial2 = 'a partial1 * 'a t
 
   fun cast c =
     case c
@@ -39,8 +37,7 @@ structure TermCard : CARD = struct
   type slot' = int
   type 'a card = 'a Term.t
   type u = unit
-  datatype unitype = U of unitype
-  type field = unitype Term.t
+  type field = Unitype.t Term.t
   val untyped = Term.cast
   
   open Term
@@ -95,11 +92,8 @@ functor TermCombinatorsFn (val clock : Clock.t
                                                  and type slot = int
                                                  and type slot' = int
                                                  and type u = unit
-                                                 and type field = TermCard.unitype Term.t
-                          ) : sig
-                                include COMBINATORS
-                                val clock : Clock.t
-                              end = 
+                                                 and type field = Unitype.t Term.t
+                          ) : COMBINATORS =
 struct
   structure Card = TermCard
   val clock = clock

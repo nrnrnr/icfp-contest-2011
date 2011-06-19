@@ -2,7 +2,6 @@ structure StringCard : CARD = struct
   type 'a card = string
   type slot = int
   type slot' = int
-  type unitype = unit
   type field = unit
 
   fun untyped c = c

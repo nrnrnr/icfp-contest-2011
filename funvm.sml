@@ -50,10 +50,9 @@ functor RunFn(structure Value : VALUE
 struct
   type 'a card = 'a Value.v
   open Value
-  datatype unitype = U of unitype
   val untyped = cast
   type u = unit
-  type field = unitype card
+  type field = Unitype.t card
 
   type 'a pre_pair = { embed : 'a -> 'a v, project : 'a v -> 'a }
   type 'a pair = Clock.t -> 'a pre_pair
