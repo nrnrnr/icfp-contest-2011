@@ -10,6 +10,11 @@ data C = S | K | I | P | C :@: C | Get
 data Instruction = ApplySlot C
                  | ApplyCard C
 
+instance Show Instruction where
+  show (ApplySlot c) = "a[i] := a[i] " ++ show c
+  show (ApplyCard c) = "a[i] := " ++ show c ++ " a[i]"
+
+
 update slot (ApplySlot c) = cnormal (slot :@: c)
 update slot (ApplyCard c) = cnormal (c :@: slot)
 
@@ -25,7 +30,11 @@ applyTo1 = [ac K, ac S, as Get, ac K, ac S, as Succ, as Zero]
 data Numeral = Z | Apply C Numeral
   deriving (Show)
 
-applyToNumeral n = [ac K, ac S, as Get] ++ toNum n
+applyToSlotNumeraled n = [ac K, ac S, as Get] ++ toNum n
+    where toNum Z = [as Zero]
+          toNum (Apply c n) = [ac K, ac S, as c] ++ toNum n
+
+applyToNumeral n = toNum n
     where toNum Z = [as Zero]
           toNum (Apply c n) = [ac K, ac S, as c] ++ toNum n
 
@@ -45,10 +54,12 @@ number (Apply Dbl n) = 2 * number n
 
 n_left_inverse n = n >= 0 ==> number (numeral n) == n
 
-applyToN n = applyToNumeral (numeral n)
+applyToN n = applyToSlotNumeraled (numeral n)
 
 apply_law n = n >= 0 ==> run (applyToN n) == Slot 17 :@: Slot n
 
+apply_num_law n = n >= 0 ==>
+                  run (applyToNumeral (numeral n)) == Slot 17 :@: Lit n
 
 apps :: C -> Int
 apps (c :@: c') = apps c + apps c' + 1

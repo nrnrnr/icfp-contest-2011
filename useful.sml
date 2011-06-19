@@ -4,6 +4,7 @@ functor Useful (Move : MOVE where type Card.slot = int) :
     val applyItoJ : slot -> slot -> Move.t list  (* apply slot i to slot j,
                                                     leaving result in slot i
                                                   *)
+    val apply_to_literal : slot -> int -> Move.t list (* a[i] := a[i](n) *)
     val loadCompose : slot -> Move.t list (* load the compose function into slot j,
                                              assuming it is initially the identity
                                            *)
@@ -90,5 +91,13 @@ struct
 
   fun copyItoJ from to =
     loadN to from @ [M.CardToSlot (C.cast C.get, to)]
+
+  fun apply_to_literal slot n =
+    let fun acd card = M.CardToSlot (C.cast card, slot)
+        fun asl card = M.SlotToCard (slot, C.cast card)
+        fun toNum Z = [asl C.zero]
+          | toNum (Apply (f, n)) = acd C.K :: acd C.S :: asl (opcard f) :: toNum n
+    in  toNum (numeral n)
+    end
 
 end  
