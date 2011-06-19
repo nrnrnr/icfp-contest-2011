@@ -12,5 +12,6 @@ in
   combo.sml
   dump.sml
   useful.sml
+  io.sml
 end
 

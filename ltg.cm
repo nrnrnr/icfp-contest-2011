@@ -11,4 +11,5 @@ group is
   simulator.sml
   dump.sml
   useful.sml
+  io.sml
   sim-main.sml
