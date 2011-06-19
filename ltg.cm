@@ -13,3 +13,4 @@ group is
   useful.sml
   io.sml
   sim-main.sml
+  useful-test.sml

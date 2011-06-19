@@ -1,4 +1,4 @@
-functor Useful (Move : MOVE where type Card.slot = int) :
+functor UsefulFn (Move : MOVE where type Card.slot = int) :
   sig
     type slot = Move.Card.slot
     val applyItoJ : slot -> slot -> Move.t list  (* apply slot i to slot j,
@@ -12,6 +12,13 @@ functor Useful (Move : MOVE where type Card.slot = int) :
                                                   assuming j holds the identity *)
     val makeId : slot -> Move.t list  (* put I in the slot *)
     val loadN : slot -> int -> Move.t list   (* load N into the slot, assuming it holds I *)
+
+    val mutualHelpUsing : slot -> slot -> slot -> int -> Move.t list
+    val mutualTmps : { code : slot, t1 : slot, t2 : slot, t3 : slot } ->
+        slot -> slot -> int -> Move.t list
+
+    val attack : slot -> int -> int -> int -> Move.t list
+    val help   : slot -> int -> int -> int -> Move.t list
 
   end =
 struct
@@ -100,4 +107,23 @@ struct
     in  toNum (numeral n)
     end
 
+  fun trip_using card slot i j n =
+         ( makeId slot
+         @ [Move.SlotToCard (slot, C.cast card)]
+         @ apply_to_literal slot i
+         @ apply_to_literal slot j
+         @ apply_to_literal slot n
+         )
+
+  val attack = trip_using C.attack
+  val help   = trip_using C.help
+
+  fun mutualHelpUsing slot i j n = help slot i j n @ help slot j i n
+  fun mutualTmps { code : slot, t1 : slot, t2 : slot, t3 : slot } i j n =
+     makeId t1 @ loadN t1 i @ makeId t2 @ loadN t2 j @ makeId t3 @ loadN t3 n @
+     makeId code @
+     [Move.SlotToCard (code, C.cast C.help)] @
+     applyItoJ code t1 @ applyItoJ code t2 @ applyItoJ code t3 @
+     [Move.SlotToCard (code, C.cast C.help)] @
+     applyItoJ code t2 @ applyItoJ code t1 @ applyItoJ code t3
 end  
