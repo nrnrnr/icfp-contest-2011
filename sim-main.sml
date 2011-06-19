@@ -78,11 +78,5 @@ end
 structure Main = SimMainFn(
   structure Sim = SimFn(val debug = true)
   structure Move = MoveFn(StringCard)
-  structure Tx = struct
-                     structure C1 = Move.Card
-                     structure C2 = TermCard
-                     exception Failed of string
-                     fun translate _ =
-                           let exception NotImplemented in raise NotImplemented end
-                 end 
+  structure Tx = TranslateStringFn(TermCard)
 )
