@@ -10,5 +10,6 @@ in
   funvm.sml
   runtest.sml
   combo.sml
+  dump.sml
 end
 

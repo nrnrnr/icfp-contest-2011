@@ -9,3 +9,4 @@ group is
   clock.sml
   move.sml
   runtest.sml
+  dump.sml
