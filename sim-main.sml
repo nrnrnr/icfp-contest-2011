@@ -5,8 +5,8 @@ functor SimMainFn(structure Sim : SIMULATOR
                   structure Tx : CARD_TRANSLATE
                       where type 'a C1.card = 'a Move.Card.card
                         and type 'a C2.card = 'a TermCard.card
-                  val printMove : Sim.player -> Move.t -> unit
-                  val getMove   : Sim.player -> Move.t) :
+                  structure IO : MOVE_IO 
+                      sharing type IO.Move.t = Move.t) :
     sig
         val runAlt : unit -> unit   (* players 1 and 2 alternate *)
         val runOnly : unit -> unit  (* player 1 runs alone *)
@@ -17,6 +17,9 @@ struct
                                 structure M2 = Sim.Move
                                 structure Tx = Tx)
     structure S = Sim
+
+    val printMove = IO.printMove
+    val getMove = IO.readMove
 
     fun playerString S.P1 = "player 0"
       | playerString S.P2 = "player 1"
@@ -46,8 +49,8 @@ struct
             val _ = app print ["*** ", playerString player, "'s turn, with slots:\n",
                                "(slots {10000,I} are omitted)\n"]
             val _ = Dump.slots slots
-            val move = getMove player
-            val _ = printMove player move
+            val move = getMove (playerString player)
+            val _ = printMove (playerString player) move
             val move = TxMove.translate move
             val _ = Sim.step move
         in  ()

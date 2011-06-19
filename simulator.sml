@@ -5,9 +5,10 @@ signature SIMULATOR = sig
   type vitality = int
   datatype player = P1 | P2
   val otherplayer : player -> player
+  type slots = (vitality * field) array
   datatype state =  (* all elements should be treated as read only *)
-      S of { slots1 : (vitality * field) array
-           , slots2 : (vitality * field) array
+      S of { slots1 : slots
+           , slots2 : slots
            , whose_turn : player ref
            , lastmove   : Move.t option ref
            , half_turns_remaining : int ref
@@ -54,12 +55,13 @@ struct
   structure Move = MoveFn(TermCard)
   type vitality = int
   type field = Unitype.t Term.t
+  type slots = (vitality * field) array
   val I = Term.C Term.I
 
   datatype player = P1 | P2
   datatype state =
-      S of { slots1 : (vitality * field) array
-           , slots2 : (vitality * field) array
+      S of { slots1 : slots
+           , slots2 : slots
            , whose_turn : player ref
            , lastmove   : Move.t option ref
            , half_turns_remaining : int ref
